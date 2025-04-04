@@ -5,18 +5,20 @@ import com.example.demo.domain.*;
 
 import com.example.demo.repos.DocumentRepo;
 import com.example.demo.repos.UserDocumentRepo;
+import com.example.demo.rest.dto.DocumentDtos.ContentRequestDto;
 import com.example.demo.rest.dto.DocumentDtos.DocumentListDTO;
+import com.example.demo.rest.dto.DocumentDtos.DocumentResponse;
 import com.example.demo.rest.dto.DocumentDtos.NewDocumentRequest;
 import com.example.demo.security.CustomUserDetails;
 import com.example.demo.service.DocumentService;
 import com.example.demo.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import javax.print.Doc;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +42,11 @@ public class DocumentServiceImpl implements DocumentService {
 
     }
 
+    public DocumentResponse convertDocumentToResponse(Document document )
+    {
+        return  new DocumentResponse(document.getId(), document.getTitle(), document.getContent(), document.getOwnerUser().getUsername(),document.getCreatedAt(),document.getUpdatedAt());
+    }
+
 
     @Override
     public void addNewUserToDocument(Long userId, Long documentId) {
@@ -55,6 +62,19 @@ public class DocumentServiceImpl implements DocumentService {
         // Сохранить обновленного пользователя
         userService.save(user);
     }
+    @Override
+    public ContentRequestDto findById(Long id) {
+
+        Optional<Document> element = documentRepo.findById(id);
+        if (element.isPresent()) {
+            Document document =  element.get();
+            return new ContentRequestDto(document.getContent());
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Документ не найден");
+        }
+    }
+
+
     @Override
     public List<DocumentListDTO> getDocumentsForCurrentUser(Authentication authentication) {
 
@@ -142,6 +162,22 @@ public class DocumentServiceImpl implements DocumentService {
 
 
     }
+
+    @Override
+    public DocumentResponse updateDocument(Long id, ContentRequestDto documentContentDto)
+    {
+        Optional<Document> element = documentRepo.findById(id);
+        Document document = element.get();
+
+        document.setContent(documentContentDto.getContent());
+        document.setUpdatedAt(Instant.now());
+
+        documentRepo.save(document);
+
+        return convertDocumentToResponse(document);
+
+    }
+
 
 
 
